@@ -1,5 +1,4 @@
 #include <iostream>
-#include <map>
 #include <vector>
 #include <queue>
 #include <set>
@@ -10,18 +9,14 @@ using namespace std;
 class CCity {
 
 public:
-    long int number = -1;
-    long int localFoodType = -1;
-    vector<CCity> neighbours;
-    long int price = 0;
-    set<long int> foodTypes;
-
-    CCity(long int number, long int localFoodType) : number(number), localFoodType(localFoodType) {}
-
-    CCity() = default;
+    unsigned long int mNumber;
+    unsigned long int mLocalFoodType;
+    vector<CCity *> mNeighbours;
+    unsigned long int mPrice = 0;
+    set<unsigned long int> mFoodTypes;
 
     bool operator<(const CCity &right) const {
-        return number < right.number;
+        return mNumber < right.mNumber;
     }
 
 };
@@ -30,63 +25,67 @@ public:
 void printGraph(vector<CCity> mGraph);
 
 int main() {
-    long int noOfCities, noOfPaths, noOfFood, noOfFoodMin;
+    unsigned long int noOfPaths, noOfFood, noOfFoodMin;
+    unsigned long noOfCities;
 
     cin >> noOfCities >> noOfPaths;
     cin >> noOfFood >> noOfFoodMin;
 
-    vector<CCity> mGraph;
-    mGraph.resize(noOfCities);
+    vector<CCity> graph;
+    graph.resize(noOfCities);
 
-    for (long int i = 0; i < noOfCities; ++i) {
-        long int loadedFoodType;
+    for (unsigned long int i = 0; i < noOfCities; ++i) {
+        unsigned long int loadedFoodType;
         cin >> loadedFoodType;
-        mGraph[i].number = i;
-        mGraph[i].localFoodType = loadedFoodType;
+        graph[i].mNumber = i;
+        graph[i].mLocalFoodType = loadedFoodType;
     }
 
-    for (int j = 0; j < noOfPaths; ++j) {
-        long int from, to;
+    for (unsigned long int j = 0; j < noOfPaths; ++j) {
+        unsigned long int from, to;
         cin >> from >> to;
 
-        mGraph[from].neighbours.push_back(mGraph[to]);
-        mGraph[to].neighbours.push_back(mGraph[from]);
+        graph[from].mNeighbours.emplace_back(&graph[to]);
+        graph[to].mNeighbours.emplace_back(&graph[from]);
     }
 
-    for (int i = 0; i < noOfCities; ++i) {
+    for (unsigned long int i = 0; i < noOfCities; ++i) {
         deque<pair<CCity, int>> nodeQueue;
         set<CCity> searched;
-        nodeQueue.emplace_back(make_pair(mGraph[i], 0));
+        nodeQueue.emplace_back(make_pair(graph[i], 0));
         int currentDepth = 0;
-        set<long int> foodTypesInTheCity;
+        set<unsigned long int> foodTypesInTheCity;
 
         // start BFS
         while (!nodeQueue.empty()) {
             const CCity currentNode = nodeQueue.front().first;
             searched.insert(currentNode);
-            cout << "neighbours: ";
-            for (const auto &neighbour : currentNode.neighbours) {
-                cout << neighbour.number << " ";
+
+            /*cout << "mNeighbours of " << currentNode.mNumber << ": ";
+            for (const auto &neighbour : currentNode.mNeighbours) {
+                cout << neighbour->mNumber << " ";
             }
-            cout << endl;
+            cout << endl;*/
+
             currentDepth = nodeQueue.front().second;
             nodeQueue.pop_front();
 
 
-            // add neighbours
-            for (const CCity &neighbour : currentNode.neighbours) {
-                auto found = searched.find(neighbour);
+            // add mNeighbours
+            for (const CCity *neighbour : currentNode.mNeighbours) {
+                auto found = searched.find(*neighbour);
                 if (found == searched.end()) {
-                    nodeQueue.push_back(make_pair(neighbour, currentDepth + 1));
+                    pair<CCity, unsigned long int> pair1 = make_pair(*neighbour, currentDepth + 1);
+                    nodeQueue.emplace_back(pair1);
                 }
             }
 
 
 
             // add the food type
-            if (foodTypesInTheCity.find(currentNode.localFoodType) == foodTypesInTheCity.end()) {
-                foodTypesInTheCity.insert(currentNode.localFoodType);
-                mGraph[i].price += currentDepth;
+            if (foodTypesInTheCity.find(currentNode.mLocalFoodType) == foodTypesInTheCity.end()) {
+                foodTypesInTheCity.insert(currentNode.mLocalFoodType);
+                graph[i].mPrice += currentDepth;
                 if (foodTypesInTheCity.size() >= noOfFoodMin) {
                     break;
                 }
@@ -95,25 +94,20 @@ int main() {
 
         if (foodTypesInTheCity.size() < noOfFoodMin) {
             cout << "Oh fuck what the hell happened in city " << i << endl;
-            cout << foodTypesInTheCity.size() << ": ";
-            for (long int food : foodTypesInTheCity) {
-                cout << food << " ";
-            }
-            cout << endl << endl;
         }
-            mGraph[i].foodTypes = foodTypesInTheCity;
+        graph[i].mFoodTypes = foodTypesInTheCity;
     }
 
-    long int totalPrice = 0;
-    for (int i = 0; i < noOfCities; ++i) {
-        totalPrice += mGraph[i].price;
+    unsigned long int totalPrice = 0;
+    for (unsigned long int i = 0; i < noOfCities; ++i) {
+        totalPrice += graph[i].mPrice;
     }
     cout << totalPrice << endl;
 
-    for (int i = 0; i < noOfCities; ++i) {
-        cout << mGraph[i].price << " ";
+    for (unsigned long int i = 0; i < noOfCities; ++i) {
+        cout << graph[i].mPrice << " ";
         bool first = true;
-        for (long int food : mGraph[i].foodTypes) {
+        for (unsigned long int food : graph[i].mFoodTypes) {
             if (!first) {
                 cout << " ";
             }
@@ -129,11 +123,12 @@ int main() {
 
 void printGraph(vector<CCity> mGraph) {
     cout << "Printing the whole graph:" << endl;
-    for (int k = 0; k < mGraph.size(); ++k) {
-        cout << k << ", localFoodType: " << mGraph[k].localFoodType << ", neighbours: " << endl;
-        for (int i = 0; i < mGraph[k].neighbours.size(); ++i) {
-            cout << mGraph[k].neighbours[i].number << "(" << mGraph[k].neighbours[i].localFoodType << "), ";
+    for (unsigned long int k = 0; k < mGraph.size(); ++k) {
+        cout << k << ", mLocalFoodType: " << mGraph[k].mLocalFoodType << ", mNeighbours: " << endl;
+        for (auto &neighbour : mGraph[k].mNeighbours) {
+            cout << neighbour->mNumber << "(" << neighbour->mLocalFoodType << "), ";
         }
         cout << endl;
     }
+    cout << endl;
 }
