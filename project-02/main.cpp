@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 
 using namespace std;
 
@@ -67,7 +68,7 @@ Node * firstRightParent(Node * node) {
         current = current->mParent;
     }
 
-    if (current->mParent == nullptr){
+    if (current->mParent == nullptr) {
         return nullptr;
     } else {
         return current->mParent;
@@ -113,65 +114,29 @@ Node * deleteNode(Node * node, int key) {
     } else if (node->mKey < key) {
         node->mRight = deleteNode(node->mRight, key);
         return node;
-    }
-
-    if (node->mRight == nullptr && node->mLeft == nullptr) {
-        delete node;
-        return nullptr;
-    } else if (node->mRight == nullptr) {
-        // one child
-        Node * tmp = node->mLeft;
-        tmp->mParent = node->mParent;
-        delete node;
-        return tmp;
-    } else if (node->mLeft == nullptr) {
-        // one child
-        Node * tmp = node->mRight;
-        tmp->mParent = node->mParent;
-        delete node;
-        return tmp;
     } else {
-        // two children
-
-        // find node to insert instead of the deleted node
-        Node * succ = successor(node);
-
-        if (succ->mRight == nullptr) {
-            node->mKey = succ->mKey;
-            if (succ->mParent->mLeft == succ){
-                succ->mParent->mLeft = nullptr;
-            } else {
-                succ->mParent->mRight = nullptr;
-            }
-            delete succ;
-            return node;
+        if (node->mRight == nullptr && node->mLeft == nullptr) {
+            delete node;
+            node = nullptr;
+        } else if (node->mRight == nullptr) {
+            // one child
+            Node * tmp = node->mLeft;
+            tmp->mParent = node->mParent;
+            delete node;
+            return tmp;
+        } else if (node->mLeft == nullptr) {
+            // one child
+            Node * tmp = node->mRight;
+            tmp->mParent = node->mParent;
+            delete node;
+            return tmp;
         } else {
-            Node * lastSuccChild = succ->mRight;
-            while ( lastSuccChild->mRight != nullptr ) {
-                lastSuccChild = lastSuccChild->mRight;
-            }
+            // two children
 
-
-            // change key, disconnect 19 and 23
+            // find node to insert instead of the deleted node
+            Node * succ = successor(node);
             node->mKey = succ->mKey;
-            if (succ->mParent->mLeft == succ){
-                succ->mParent->mLeft = nullptr;
-            } else {
-                succ->mParent->mRight = nullptr;
-            }
-
-            // connect 21 and 23
-            lastSuccChild->mRight = node->mRight;
-            lastSuccChild->mRight->mParent = lastSuccChild; // todo segfault on pyramid
-
-            // connect 12 and 20, disconnect 19 and 20
-            succ->mRight->mParent = node;
-            node->mRight = succ->mRight;
-
-
-            delete succ;
-            return node;
-
+            node->mRight = deleteNode(node->mRight, succ->mKey);
         }
     }
     return node;
@@ -216,6 +181,100 @@ void deleteTree(Node * node) {
     delete node;
 }
 
+Node * rotateTreeLeft(Node * node) {
+    if (node->mRight == nullptr) { return nullptr; }
+
+    Node * second = node->mRight;
+    Node * third = second->mLeft;
+
+    second->mLeft = node;
+    node->mRight = third;
+
+    second->mParent = node->mParent;
+    node->mParent = second;
+    if (third != nullptr) third->mParent = node;
+
+    if (second->mParent != nullptr) {
+        if (second->mParent->mLeft == node) {
+            second->mParent->mLeft = second;
+        } else {
+            second->mParent->mRight = second;
+        }
+    }
+
+    return second;
+}
+
+Node * rotateTreeRight(Node * node) {
+    if (node->mLeft == nullptr) { return nullptr; }
+
+    Node * second = node->mLeft;
+    Node * third = second->mRight;
+
+    second->mRight = node;
+    node->mLeft = third;
+
+    second->mParent = node->mParent;
+    node->mParent = second;
+    if (third != nullptr) third->mParent = node;
+
+    if (second->mParent != nullptr) {
+        if (second->mParent->mLeft == node) {
+            second->mParent->mLeft = second;
+        } else {
+            second->mParent->mRight = second;
+        }
+    }
+
+    return second;
+}
+
+Node * rotateTree(Node * root, int val1, int val2) {
+    bool headRotate = false;
+    Node * found = search(root, val1);
+    if (found == nullptr) {
+        cout << "notfound" << endl;
+        return root;
+    }
+    if (found == root) headRotate = true;
+
+    Node * tmp = nullptr;
+    if (val2 == 1) {
+        tmp = rotateTreeLeft(found);
+    } else {
+        tmp = rotateTreeRight(found);
+    }
+
+    if (tmp == nullptr) {
+        cout << "norotate" << endl;
+        return root;
+    }
+
+    if (headRotate) {
+        return tmp;
+    } else {
+        return root;
+    }
+}
+
+void postorder(Node* p, int indent = 3)
+{
+    if(p != nullptr) {
+        if(p->mRight) {
+            postorder(p->mRight, indent+4);
+        }
+        if (indent) {
+            std::cout << std::setw(indent) << ' ';
+        }
+        if (p->mRight) std::cout<<" /\n" << std::setw(indent) << ' ';
+        std::cout<< p->mKey << "(" << ((p->mParent) ? to_string(p->mParent->mKey) : "root") << ")\n ";
+        if(p->mLeft) {
+            std::cout << std::setw(indent) << ' ' <<" \\\n";
+            postorder(p->mLeft, indent+4);
+        }
+    }
+}
+
 int main() {
     int inputType, inputVal1, inputVal2;
     Node * treeRoot = nullptr;
@@ -229,6 +288,8 @@ int main() {
         } else {
             cin >> inputVal1;
         }
+        //postorder(treeRoot);
+        //cout << "---------------" << endl << endl;
 
         if (inputType == 1) {
             // cout << 1 << " " << inputVal1 << endl;
@@ -243,8 +304,8 @@ int main() {
             //   cout << 4 << " " << inputVal1 << endl;
             printSuccessor(treeRoot, inputVal1);
         } else if (inputType == 5) {
-            cout << 5 << " " << inputVal1 << endl;
-            // rotateTree(inputVal1, inputVal2);
+           // cout << "rotation (" << inputVal1 << ", " << inputVal2 << ")" <<endl;
+            treeRoot = rotateTree(treeRoot, inputVal1, inputVal2);
         }
 
     }
